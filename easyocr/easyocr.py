@@ -17,6 +17,10 @@ from logging import getLogger
 import yaml
 import json
 
+import torch
+from transformers import VisionEncoderDecoderModel, TrOCRProcessor
+
+
 if sys.version_info[0] == 2:
     from io import open
     from six.moves.urllib.request import urlretrieve
@@ -31,7 +35,7 @@ class Reader(object):
 
     def __init__(self, lang_list, gpu=True, model_storage_directory=None,
                  user_network_directory=None, detect_network="craft", 
-                 recog_network='standard', download_enabled=True, 
+                 recog_network = 'standard', download_enabled=True, 
                  detector=True, recognizer=True, verbose=True, 
                  quantize=True, cudnn_benchmark=False):
         """Create an EasyOCR Reader
@@ -189,7 +193,12 @@ class Reader(object):
                     assert calculate_md5(model_path) == model['md5sum'], corrupt_msg
                     LOGGER.info('Download complete')
             self.setLanguageList(lang_list, model)
-
+        elif recog_network == 'trocr':
+            self.trocr = True
+            self.character = 'korean'
+            self.trocr_processor = TrOCRProcessor.from_pretrained('team-lucid/trocr-small-korean')
+            self.trocr_model = VisionEncoderDecoderModel.from_pretrained("team-lucid/trocr-small-korean")
+            
         else: # user-defined model
             with open(os.path.join(self.user_network_directory, recog_network+ '.yaml'), encoding='utf8') as file:
                 recog_config = yaml.load(file, Loader=yaml.FullLoader)
@@ -212,26 +221,27 @@ class Reader(object):
 
         if detector:
             self.detector = self.initDetector(detector_path)
-            
-        if recognizer:
-            if recog_network == 'generation1':
-                network_params = {
-                    'input_channel': 1,
-                    'output_channel': 512,
-                    'hidden_size': 512
-                    }
-            elif recog_network == 'generation2':
-                network_params = {
-                    'input_channel': 1,
-                    'output_channel': 256,
-                    'hidden_size': 256
-                    }
-            else:
-                network_params = recog_config['network_params']
-            self.recognizer, self.converter = get_recognizer(recog_network, network_params,\
-                                                         self.character, separator_list,\
-                                                         dict_list, model_path, device = self.device, quantize=quantize)
-
+        
+        
+        if not self.trocr:
+            if recognizer:
+                network_params = dict()
+                model_path = str()
+                if recog_network == 'generation1':
+                    network_params = {
+                        'input_channel': 1,
+                        'output_channel': 512,
+                        'hidden_size': 512
+                        }
+                elif recog_network == 'generation2':
+                    network_params = {
+                        'input_channel': 1,
+                        'output_channel': 256,
+                        'hidden_size': 256
+                        }
+                else:
+                    network_params = recog_config['network_params']
+                self.recognizer, self.converter = get_recognizer(recog_network, network_params, self.character, separator_list, dict_list, model_path, device = self.device, quantize=quantize)        
     def getDetectorPath(self, detect_network):
         if detect_network in self.support_detection_network:
             self.detect_network = detect_network
@@ -357,6 +367,11 @@ class Reader(object):
                   contrast_ths = 0.1,adjust_contrast = 0.5, filter_ths = 0.003,\
                   y_ths = 0.5, x_ths = 1.0, reformat=True, output_format='standard'):
 
+        if self.trocr:
+            self.lang_char = set()
+            self.recognizer = None
+            self.converter = None
+            self.model_lang = None
         if reformat:
             img, img_cv_grey = reformat_input(img_cv_grey)
 
@@ -367,7 +382,8 @@ class Reader(object):
         else:
             ignore_char = ''.join(set(self.character)-set(self.lang_char))
 
-        if self.model_lang in ['chinese_tra','chinese_sim']: decoder = 'greedy'
+        if not self.trocr:
+            if self.model_lang in ['chinese_tra','chinese_sim']: decoder = 'greedy'
 
         if (horizontal_list==None) and (free_list==None):
             y_max, x_max = img_cv_grey.shape
@@ -383,7 +399,7 @@ class Reader(object):
                 image_list, max_width = get_image_list(h_list, f_list, img_cv_grey, model_height = imgH)
                 result0 = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                               ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
-                              workers, self.device)
+                              workers, self.device, self.trocr_model, self.trocr_processor)
                 result += result0
             for bbox in free_list:
                 h_list = []
@@ -391,7 +407,7 @@ class Reader(object):
                 image_list, max_width = get_image_list(h_list, f_list, img_cv_grey, model_height = imgH)
                 result0 = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                               ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
-                              workers, self.device)
+                              workers, self.device, self.trocr_model, self.trocr_processor)
                 result += result0
         # default mode will try to process multiple boxes at the same time
         else:
@@ -403,7 +419,7 @@ class Reader(object):
 
             result = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                           ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
-                          workers, self.device)
+                          workers, self.device, self.trocr_model, self.trocr_processor)
 
             if rotation_info and (horizontal_list+free_list):
                 # Reshape result to be a list of lists, each row being for 
