@@ -55,6 +55,9 @@ class Reader(object):
 
             download_enabled (bool): Enabled downloading of model data via HTTP (default).
         """
+        self.trocr = False
+        self.trocr_model = None
+        self.trocr_processor = None
         self.verbose = verbose
         self.download_enabled = download_enabled
 
@@ -225,8 +228,8 @@ class Reader(object):
         
         if not self.trocr:
             if recognizer:
-                network_params = dict()
-                model_path = str()
+                # network_params = dict()
+                # model_path = str()
                 if recog_network == 'generation1':
                     network_params = {
                         'input_channel': 1,
@@ -397,6 +400,7 @@ class Reader(object):
                 h_list = [bbox]
                 f_list = []
                 image_list, max_width = get_image_list(h_list, f_list, img_cv_grey, model_height = imgH)
+
                 result0 = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                               ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
                               workers, self.device, self.trocr_model, self.trocr_processor)
@@ -464,7 +468,8 @@ class Reader(object):
         image: file path or numpy-array or a byte stream object
         '''
         img, img_cv_grey = reformat_input(image)
-
+        import time
+        start = time.time()
         horizontal_list, free_list = self.detect(img, 
                                                  min_size = min_size, text_threshold = text_threshold,\
                                                  low_text = low_text, link_threshold = link_threshold,\
@@ -476,13 +481,16 @@ class Reader(object):
                                                  bbox_min_size = bbox_min_size, max_candidates = max_candidates
                                                  )
         # get the 1st result from hor & free list as self.detect returns a list of depth 3
+        print ('전체 Detection 걸린 시간', time.time()-start)
+
         horizontal_list, free_list = horizontal_list[0], free_list[0]
-        result = self.recognize(img_cv_grey, horizontal_list, free_list,\
+        start = time.time()
+        result = self.recognize((lambda : img if self.trocr else img_cv_grey)(), horizontal_list, free_list,\
                                 decoder, beamWidth, batch_size,\
                                 workers, allowlist, blocklist, detail, rotation_info,\
                                 paragraph, contrast_ths, adjust_contrast,\
                                 filter_ths, y_ths, x_ths, False, output_format)
-
+        print ('전체 Recognize 걸린 시간', time.time()-start)
         return result
     
     def readtextlang(self, image, decoder = 'greedy', beamWidth= 5, batch_size = 1,\

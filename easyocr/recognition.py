@@ -10,6 +10,7 @@ import importlib
 from .utils import CTCLabelConverter
 import math
 import cv2
+import time
 def custom_mean(x):
     return x.prod()**(2.0/np.sqrt(len(x)))
 
@@ -238,25 +239,23 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
         return result
     else:
         # result1 이 2차원 배열 (box, (pred[0], pred[1]))
-        texts = trocr_images2text(trocr_model = trocr_model, trocr_processor = trocr_processor, images = img_list)
+        device = torch.device(device)
+        trocr_model.to(device)
+        texts = trocr_images2text(trocr_model = trocr_model, trocr_processor = trocr_processor, images = img_list, device = device)
         for cod, lbl in zip (coord, texts):
             result.append((cod, lbl, 0.9))
         return result
     
-def trocr_images2text(trocr_model, trocr_processor, images = None):
-    
-    images = np.array([np.expand_dims (img, axis = 0) for img in images])
-    generated_text = None
-    # batch size 로 만들어야 됨
-    for image in images:
-        image = np.transpose(image, (1, 2, 0))
-
-        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-        image = np.transpose(image, (2, 0, 1))
-        
-
-        pixel_values = trocr_processor(images = image, return_tensors="pt").pixel_values
-        generated_ids = trocr_model.generate(pixel_values)
-        generated_text = trocr_processor.batch_decode(generated_ids, skip_special_tokens = True)
-  
+def trocr_images2text(trocr_model, trocr_processor, images = None, device = None):
+    #print ('#################')
+    #s = time.time()
+    pixel_values = trocr_processor(images = images, return_tensors="pt").pixel_values.to(device)
+    #print ('process', time.time()-s)
+    #s = time.time()
+    generated_ids = trocr_model.generate(pixel_values)
+    #print ('generate', time.time()-s)
+    #s = time.time()
+    generated_text = trocr_processor.batch_decode(generated_ids, skip_special_tokens = True)
+    #print ('batch_decode', time.time()-s)
+    #print ('#################')
     return generated_text

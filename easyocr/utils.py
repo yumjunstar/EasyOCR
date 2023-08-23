@@ -579,7 +579,10 @@ def compute_ratio_and_resize(img,width,height,model_height):
 
 def get_image_list(horizontal_list, free_list, img, model_height = 64, sort_output = True):
     image_list = []
-    maximum_y,maximum_x = img.shape
+    if (len(img.shape) == 3):
+        maximum_y, maximum_x, channel = img.shape
+    else:
+        maximum_y,maximum_x = img.shape
 
     max_ratio_hori, max_ratio_free = 1,1
     for box in free_list:
