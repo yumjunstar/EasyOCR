@@ -241,11 +241,15 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
         # result1 이 2차원 배열 (box, (pred[0], pred[1]))
         device = torch.device(device)
         trocr_model.to(device)
+        start = time.time()
         texts = trocr_images2text(trocr_model = trocr_model, trocr_processor = trocr_processor, images = img_list, device = device)
+        print ('trocr time consume', time.time() - start)
+        start = time.time()
         for cod, lbl in zip (coord, texts):
             background_color = 0xFFFFFF
             text_color = 0x000000
             result.append((cod, lbl, 0.9, background_color, text_color))
+        print ('output create consume', time.time()- start)
         return result
     
 def trocr_images2text(trocr_model, trocr_processor, images = None, device = None):
