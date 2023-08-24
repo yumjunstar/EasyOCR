@@ -421,7 +421,6 @@ class Reader(object):
                 result += result0
         # default mode will try to process multiple boxes at the same time
         else:
-            print ('gpu')
             image_list, max_width = get_image_list(horizontal_list, free_list, img, model_height = imgH)
             image_len = len(image_list)
             if rotation_info and image_list:
