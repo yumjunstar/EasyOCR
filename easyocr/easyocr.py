@@ -16,7 +16,7 @@ from PIL import Image
 from logging import getLogger
 import yaml
 import json
-
+import time
 import torch
 from transformers import VisionEncoderDecoderModel, TrOCRProcessor
 
@@ -490,7 +490,7 @@ class Reader(object):
         img, img_cv_grey = reformat_input(image)
         
         img_bundle = {'color' : img, 'grey': img_cv_grey}
-        import time
+
         start = time.time()
         horizontal_list, free_list = self.detect(img, 
                                                  min_size = min_size, text_threshold = text_threshold,\
@@ -503,7 +503,7 @@ class Reader(object):
                                                  bbox_min_size = bbox_min_size, max_candidates = max_candidates
                                                  )
         # get the 1st result from hor & free list as self.detect returns a list of depth 3
-        print ('전체 Detection 걸린 시간', time.time()-start)
+        if self.verbose: print ('Total Detection 걸린 시간', time.time()-start)
 
         horizontal_list, free_list = horizontal_list[0], free_list[0]
         start = time.time()
@@ -512,7 +512,7 @@ class Reader(object):
                                 workers, allowlist, blocklist, detail, rotation_info,\
                                 paragraph, contrast_ths, adjust_contrast,\
                                 filter_ths, y_ths, x_ths, False, output_format)
-        print ('전체 Recognize 걸린 시간', time.time()-start)
+        if self.verbose: print ('Total Recognize 걸린 시간', time.time()-start)
         return result
     
     def readtextlang(self, image, decoder = 'greedy', beamWidth= 5, batch_size = 1,\
