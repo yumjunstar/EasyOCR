@@ -190,20 +190,20 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
              ignore_char = '',decoder = 'greedy', beamWidth =5, batch_size=1, contrast_ths=0.1,\
              adjust_contrast=0.5, filter_ths = 0.003, workers = 1, device = 'cpu', trocr_model = None, trocr_processor = None    
              ):
-    batch_max_length = int(imgW/10)
-
-    char_group_idx = {}
-    ignore_idx = []
-    for char in ignore_char:
-        try: ignore_idx.append(character.index(char)+1)
-        except: pass
 
     coord = [item[0] for item in image_list]
     img_list = [item[1] for item in image_list]
     result = []
-    result1 = []
 
     if not (trocr_model and trocr_processor): # Not trocr
+
+        result1 = []
+        batch_max_length = int(imgW/10)
+        char_group_idx = {}
+        ignore_idx = []
+        for char in ignore_char:
+            try: ignore_idx.append(character.index(char)+1)
+            except: pass
         AlignCollate_normal = AlignCollate(imgH=imgH, imgW=imgW, keep_ratio_with_pad=True)
         test_data = ListDataset(img_list)
         test_loader = torch.utils.data.DataLoader(
@@ -243,7 +243,9 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
         trocr_model.to(device)
         texts = trocr_images2text(trocr_model = trocr_model, trocr_processor = trocr_processor, images = img_list, device = device)
         for cod, lbl in zip (coord, texts):
-            result.append((cod, lbl, 0.9))
+            background_color = 0xFFFFFF
+            text_color = 0x000000
+            result.append((cod, lbl, 0.9, background_color, text_color))
         return result
     
 def trocr_images2text(trocr_model, trocr_processor, images = None, device = None):

@@ -363,20 +363,28 @@ class Reader(object):
 
         return horizontal_list_agg, free_list_agg
 
-    def recognize(self, img_cv_grey, horizontal_list=None, free_list=None,\
+    def recognize(self, img_bundle, horizontal_list=None, free_list=None,\
                   decoder = 'greedy', beamWidth= 5, batch_size = 1,\
                   workers = 0, allowlist = None, blocklist = None, detail = 1,\
                   rotation_info = None,paragraph = False,\
                   contrast_ths = 0.1,adjust_contrast = 0.5, filter_ths = 0.003,\
                   y_ths = 0.5, x_ths = 1.0, reformat=True, output_format='standard'):
 
-        if self.trocr:
+
+        if self.trocr:# Trocr에서는 recognization에서 color를 사용한다.
+            img_src = img_bundle['color']
             self.lang_char = set()
             self.recognizer = None
             self.converter = None
             self.model_lang = None
-        if reformat:
-            img, img_cv_grey = reformat_input(img_cv_grey)
+            img = img_src
+        else:# Trocr이 아닌 경우에서는 grey 이미지를 사용한다.
+            img_src = img_bundle['grey']
+            if self.model_lang in ['chinese_tra','chinese_sim']: decoder = 'greedy'
+            img_cv_grey = img_bundle['grey']
+            if reformat:
+                img, img_cv_grey = reformat_input(img_src)
+            img = img_cv_grey
 
         if allowlist:
             ignore_char = ''.join(set(self.character)-set(allowlist))
@@ -384,9 +392,7 @@ class Reader(object):
             ignore_char = ''.join(set(blocklist))
         else:
             ignore_char = ''.join(set(self.character)-set(self.lang_char))
-
-        if not self.trocr:
-            if self.model_lang in ['chinese_tra','chinese_sim']: decoder = 'greedy'
+            
 
         if (horizontal_list==None) and (free_list==None):
             y_max, x_max = img_cv_grey.shape
@@ -399,7 +405,7 @@ class Reader(object):
             for bbox in horizontal_list:
                 h_list = [bbox]
                 f_list = []
-                image_list, max_width = get_image_list(h_list, f_list, img_cv_grey, model_height = imgH)
+                image_list, max_width = get_image_list(h_list, f_list, img, model_height = imgH)
 
                 result0 = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                               ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
@@ -408,14 +414,14 @@ class Reader(object):
             for bbox in free_list:
                 h_list = []
                 f_list = [bbox]
-                image_list, max_width = get_image_list(h_list, f_list, img_cv_grey, model_height = imgH)
+                image_list, max_width = get_image_list(h_list, f_list, img, model_height = imgH)
                 result0 = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                               ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
                               workers, self.device, self.trocr_model, self.trocr_processor)
                 result += result0
         # default mode will try to process multiple boxes at the same time
         else:
-            image_list, max_width = get_image_list(horizontal_list, free_list, img_cv_grey, model_height = imgH)
+            image_list, max_width = get_image_list(horizontal_list, free_list, img, model_height = imgH)
             image_len = len(image_list)
             if rotation_info and image_list:
                 image_list = make_rotated_img_list(rotation_info, image_list)
@@ -450,6 +456,22 @@ class Reader(object):
             return [json.dumps({'boxes':[list(map(int, lst)) for lst in item[0]],'text':item[1],'confident':item[2]}, ensure_ascii=False) for item in result]
         elif output_format == 'free_merge':
             return merge_to_free(result, free_list)
+        elif output_format == 'json_specific_and_relative_pos':
+            img_y_max, img_x_max = img_src.shape[0:2]
+            def normal(i):
+                return_value = 0
+                if normal.counter:
+                    return_value = float(i/img_x_max)
+                    print ('x', return_value)
+                else:
+                    return_value = float (i/img_y_max)
+                    print ('y', return_value)
+                normal.counter = not normal.counter
+
+                return return_value
+            normal.counter = True
+            return [json.dumps({'boxes':[list(map(normal, lst)) for lst in item[0]],'text':item[1],'confident':item[2], 'background_color':item[3], 'text_color':item[4]}, ensure_ascii=False) for item in result]
+            # Include Bounding box relate_pos, text, confident, background_color, text_color
         else:
             return result
 
@@ -468,6 +490,8 @@ class Reader(object):
         image: file path or numpy-array or a byte stream object
         '''
         img, img_cv_grey = reformat_input(image)
+        
+        img_bundle = {'color' : img, 'grey': img_cv_grey}
         import time
         start = time.time()
         horizontal_list, free_list = self.detect(img, 
@@ -485,7 +509,7 @@ class Reader(object):
 
         horizontal_list, free_list = horizontal_list[0], free_list[0]
         start = time.time()
-        result = self.recognize((lambda : img if self.trocr else img_cv_grey)(), horizontal_list, free_list,\
+        result = self.recognize(img_bundle, horizontal_list, free_list,\
                                 decoder, beamWidth, batch_size,\
                                 workers, allowlist, blocklist, detail, rotation_info,\
                                 paragraph, contrast_ths, adjust_contrast,\
