@@ -462,10 +462,8 @@ class Reader(object):
                 return_value = 0
                 if normal.counter:
                     return_value = float(i/img_x_max)
-                    print ('x', return_value)
                 else:
                     return_value = float (i/img_y_max)
-                    print ('y', return_value)
                 normal.counter = not normal.counter
 
                 return return_value
