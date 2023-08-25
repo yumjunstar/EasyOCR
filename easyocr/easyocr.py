@@ -18,7 +18,7 @@ import yaml
 import json
 import time
 import torch
-from transformers import VisionEncoderDecoderModel, TrOCRProcessor
+from transformers import VisionEncoderDecoderModel, TrOCRProcessor, AutoTokenizer
 
 
 if sys.version_info[0] == 2:
@@ -199,8 +199,9 @@ class Reader(object):
         elif recog_network == 'trocr':
             self.trocr = True
             self.character = 'korean'
-            self.trocr_processor = TrOCRProcessor.from_pretrained('team-lucid/trocr-small-korean')
-            self.trocr_model = VisionEncoderDecoderModel.from_pretrained("team-lucid/trocr-small-korean")
+            self.trocr_processor = TrOCRProcessor.from_pretrained('microsoft/trocr-base-printed')
+            self.trocr_model = VisionEncoderDecoderModel.from_pretrained('team-lucid/trocr-small-korean')
+            self.trocr_tokenizer = AutoTokenizer.from_pretrained('team-lucid/trocr-small-korean')
             
         else: # user-defined model
             with open(os.path.join(self.user_network_directory, recog_network+ '.yaml'), encoding='utf8') as file:
@@ -409,7 +410,7 @@ class Reader(object):
 
                 result0 = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                               ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
-                              workers, self.device, self.trocr_model, self.trocr_processor)
+                              workers, self.device, self.trocr_model, self.trocr_processor, self.trocr_tokenizer)
                 result += result0
             for bbox in free_list:
                 h_list = []
@@ -417,7 +418,7 @@ class Reader(object):
                 image_list, max_width = get_image_list(h_list, f_list, img, model_height = imgH)
                 result0 = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                               ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
-                              workers, self.device, self.trocr_model, self.trocr_processor)
+                              workers, self.device, self.trocr_model, self.trocr_processor, self.trocr_tokenizer)
                 result += result0
         # default mode will try to process multiple boxes at the same time
         else:
@@ -429,7 +430,7 @@ class Reader(object):
 
             result = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                           ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
-                          workers, self.device, self.trocr_model, self.trocr_processor)
+                          workers, self.device, self.trocr_model, self.trocr_processor, self.trocr_tokenizer)
 
             if rotation_info and (horizontal_list+free_list):
                 # Reshape result to be a list of lists, each row being for 
@@ -465,7 +466,6 @@ class Reader(object):
                 else:
                     return_value = float (i/img_y_max)
                 normal.counter = not normal.counter
-
                 return return_value
             normal.counter = True
             return [json.dumps({'boxes':[list(map(normal, lst)) for lst in item[0]],'text':item[1],'confident':item[2], 'background_color':item[3], 'text_color':item[4]}, ensure_ascii=False) for item in result]

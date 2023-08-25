@@ -188,7 +188,7 @@ def get_recognizer(recog_network, network_params, character,\
 
 def get_text(character, imgH, imgW, recognizer, converter, image_list,\
              ignore_char = '',decoder = 'greedy', beamWidth =5, batch_size=1, contrast_ths=0.1,\
-             adjust_contrast=0.5, filter_ths = 0.003, workers = 1, device = 'cpu', trocr_model = None, trocr_processor = None    
+             adjust_contrast=0.5, filter_ths = 0.003, workers = 1, device = 'cpu', trocr_model = None, trocr_processor = None, trocr_tokenizer = None
              ):
 
     coord = [item[0] for item in image_list]
@@ -242,7 +242,7 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
         device = torch.device(device)
         trocr_model.to(device)
         start = time.time()
-        texts = trocr_images2text(trocr_model = trocr_model, trocr_processor = trocr_processor, images = img_list, device = device)
+        texts = trocr_images2text(trocr_model = trocr_model, trocr_processor = trocr_processor, trocr_tokenizer=trocr_tokenizer,images = img_list, device = device)
         #print ('trocr time consume', time.time() - start)
         start = time.time()
         for cod, lbl in zip (coord, texts):
@@ -252,7 +252,7 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
         #print ('output create consume', time.time()- start)
         return result
     
-def trocr_images2text(trocr_model, trocr_processor, images = None, device = None):
+def trocr_images2text(trocr_model, trocr_processor, trocr_tokenizer, images = None, device = None):
     #print ('#################')
     #s = time.time()
     pixel_values = trocr_processor(images = images, return_tensors="pt").pixel_values.to(device)
@@ -261,7 +261,7 @@ def trocr_images2text(trocr_model, trocr_processor, images = None, device = None
     generated_ids = trocr_model.generate(pixel_values)
     #print ('generate', time.time()-s)
     #s = time.time()
-    generated_text = trocr_processor.batch_decode(generated_ids, skip_special_tokens = True)
+    generated_text = trocr_tokenizer.batch_decode(generated_ids, skip_special_tokens = True)
     #print ('batch_decode', time.time()-s)
     #print ('#################')
     return generated_text
