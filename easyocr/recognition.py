@@ -245,9 +245,10 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
         texts = trocr_images2text(trocr_model = trocr_model, trocr_processor = trocr_processor, trocr_tokenizer=trocr_tokenizer,images = img_list, device = device)
         #print ('trocr time consume', time.time() - start)
         start = time.time()
-        for cod, lbl in zip (coord, texts):
-            background_color = 0xFFFFFF
-            text_color = 0x000000
+        for cod, lbl, img in zip (coord, texts, img_list):
+            background_color, text_color = get_text_and_background_color(img)
+            #background_color = 0xFFFFFF
+            #text_color = 0x000000
             result.append((cod, lbl, 0.9, background_color, text_color))
         #print ('output create consume', time.time()- start)
         return result
@@ -265,3 +266,15 @@ def trocr_images2text(trocr_model, trocr_processor, trocr_tokenizer, images = No
     #print ('batch_decode', time.time()-s)
     #print ('#################')
     return generated_text
+def get_text_and_background_color(img):
+    grey_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(grey_img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    #배경과 텍스트 부분의 평균 색상 계산
+    text_mean = list(map(int, cv2.mean(img, mask=binary)))
+    background_mean = list(map(int, cv2.mean(img, mask=cv2.bitwise_not(binary))))
+    
+    text_mean[3] = 255
+    background_mean[3] = 127
+    
+    #print (text_mean, background_mean)
+    return background_mean, text_mean
