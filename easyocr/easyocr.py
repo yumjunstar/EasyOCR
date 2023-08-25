@@ -58,6 +58,7 @@ class Reader(object):
         self.trocr = False
         self.trocr_model = None
         self.trocr_processor = None
+        self.trocr_tokenizer = None
         self.verbose = verbose
         self.download_enabled = download_enabled
 
