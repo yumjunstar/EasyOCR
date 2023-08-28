@@ -197,6 +197,8 @@ class Reader(object):
                     assert calculate_md5(model_path) == model['md5sum'], corrupt_msg
                     LOGGER.info('Download complete')
             self.setLanguageList(lang_list, model)
+            
+        # 준우 Edit    
         elif recog_network == 'trocr':
             self.trocr = True
             self.character = 'korean'
@@ -227,7 +229,7 @@ class Reader(object):
         if detector:
             self.detector = self.initDetector(detector_path)
         
-        
+        # 준우 Edit
         if not self.trocr:
             if recognizer:
                 # network_params = dict()
@@ -364,7 +366,7 @@ class Reader(object):
             free_list_agg.append(free_list)
 
         return horizontal_list_agg, free_list_agg
-
+    # 준우 Edit   
     def recognize(self, img_bundle, horizontal_list=None, free_list=None,\
                   decoder = 'greedy', beamWidth= 5, batch_size = 1,\
                   workers = 0, allowlist = None, blocklist = None, detail = 1,\
@@ -408,7 +410,7 @@ class Reader(object):
                 h_list = [bbox]
                 f_list = []
                 image_list, max_width = get_image_list(h_list, f_list, img, model_height = imgH)
-
+                # 준우 Edit   
                 result0 = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                               ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
                               workers, self.device, self.trocr_model, self.trocr_processor, self.trocr_tokenizer)
@@ -417,6 +419,7 @@ class Reader(object):
                 h_list = []
                 f_list = [bbox]
                 image_list, max_width = get_image_list(h_list, f_list, img, model_height = imgH)
+                # 준우 Edit   
                 result0 = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                               ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
                               workers, self.device, self.trocr_model, self.trocr_processor, self.trocr_tokenizer)
@@ -428,7 +431,7 @@ class Reader(object):
             if rotation_info and image_list:
                 image_list = make_rotated_img_list(rotation_info, image_list)
                 max_width = max(max_width, imgH)
-
+            # 준우 Edit   
             result = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                           ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
                           workers, self.device, self.trocr_model, self.trocr_processor, self.trocr_tokenizer)
@@ -458,7 +461,11 @@ class Reader(object):
             return [json.dumps({'boxes':[list(map(int, lst)) for lst in item[0]],'text':item[1],'confident':item[2]}, ensure_ascii=False) for item in result]
         elif output_format == 'free_merge':
             return merge_to_free(result, free_list)
+        
+        
+        # 준우 Edit
         elif output_format == 'json_specific_and_relative_pos':
+
             img_y_max, img_x_max = img_src.shape[0:2]
             def normal(i):
                 return_value = 0
@@ -469,11 +476,20 @@ class Reader(object):
                 normal.counter = not normal.counter
                 return return_value
             normal.counter = True
-            return [json.dumps({'boxes':[list(map(normal, lst)) for lst in item[0]],'text':item[1],'confident':item[2], 'background_color':item[3], 'text_color':item[4]}, ensure_ascii=False) for item in result]
+            def get_item_value(item, index, default_value):
+                if len(item) > index:
+                    return item[index]
+                return default_value
+            return [json.dumps({'boxes':[list(map(normal, lst)) for lst in item[0]],
+                                'text':item[1],
+                                'confident':  get_item_value(item, 2, -1), 
+                                'background_color': get_item_value(item, 3, 0xFFFFFF), 
+                                'text_color': get_item_value(item, 4, 0x000000)
+                                }, 
+                               ensure_ascii=False) for item in result]
             # Include Bounding box relate_pos, text, confident, background_color, text_color
         else:
             return result
-
     def readtext(self, image, decoder = 'greedy', beamWidth= 5, batch_size = 1,\
                  workers = 0, allowlist = None, blocklist = None, detail = 1,\
                  rotation_info = None, paragraph = False, min_size = 20,\
@@ -488,10 +504,11 @@ class Reader(object):
         Parameters:
         image: file path or numpy-array or a byte stream object
         '''
+        # 준우 Edit   
         img, img_cv_grey = reformat_input(image)
         
         img_bundle = {'color' : img, 'grey': img_cv_grey}
-
+        # 준우 Edit   
         start = time.time()
         horizontal_list, free_list = self.detect(img, 
                                                  min_size = min_size, text_threshold = text_threshold,\
@@ -503,16 +520,19 @@ class Reader(object):
                                                  threshold = threshold, bbox_min_score = bbox_min_score,\
                                                  bbox_min_size = bbox_min_size, max_candidates = max_candidates
                                                  )
-        # get the 1st result from hor & free list as self.detect returns a list of depth 3
+        # get the 1st result from hor & free list as self.detect returns a list of depth 34
+        # 준우 Edit   
         if self.verbose: print ('Total Detection 걸린 시간', time.time()-start)
 
         horizontal_list, free_list = horizontal_list[0], free_list[0]
         start = time.time()
+        # 준우 Edit   
         result = self.recognize(img_bundle, horizontal_list, free_list,\
                                 decoder, beamWidth, batch_size,\
                                 workers, allowlist, blocklist, detail, rotation_info,\
                                 paragraph, contrast_ths, adjust_contrast,\
                                 filter_ths, y_ths, x_ths, False, output_format)
+        # 준우 Edit   
         if self.verbose: print ('Total Recognize 걸린 시간', time.time()-start)
         return result
     

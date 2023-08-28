@@ -185,7 +185,7 @@ def get_recognizer(recog_network, network_params, character,\
         model.load_state_dict(torch.load(model_path, map_location=device))
 
     return model, converter
-
+# 준우 Edit   
 def get_text(character, imgH, imgW, recognizer, converter, image_list,\
              ignore_char = '',decoder = 'greedy', beamWidth =5, batch_size=1, contrast_ths=0.1,\
              adjust_contrast=0.5, filter_ths = 0.003, workers = 1, device = 'cpu', trocr_model = None, trocr_processor = None, trocr_tokenizer = None
@@ -194,7 +194,7 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
     coord = [item[0] for item in image_list]
     img_list = [item[1] for item in image_list]
     result = []
-
+    # 준우 Edit   
     if not (trocr_model and trocr_processor): # Not trocr
 
         result1 = []
@@ -238,6 +238,7 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
 
         return result
     else:
+        # 준우 Edit   
         # result1 이 2차원 배열 (box, (pred[0], pred[1]))
         device = torch.device(device)
         trocr_model.to(device)
@@ -252,7 +253,7 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
             result.append((cod, lbl, 0.9, background_color, text_color))
         #print ('output create consume', time.time()- start)
         return result
-    
+# 준우 Edit   
 def trocr_images2text(trocr_model, trocr_processor, trocr_tokenizer, images = None, device = None):
     #print ('#################')
     #s = time.time()
