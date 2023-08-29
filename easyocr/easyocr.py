@@ -203,8 +203,8 @@ class Reader(object):
             self.trocr = True
             self.character = 'korean'
             self.trocr_processor = TrOCRProcessor.from_pretrained('microsoft/trocr-base-printed')
-            self.trocr_model = VisionEncoderDecoderModel.from_pretrained('team-lucid/trocr-small-korean')
-            self.trocr_tokenizer = AutoTokenizer.from_pretrained('team-lucid/trocr-small-korean')
+            self.trocr_model = VisionEncoderDecoderModel.from_pretrained('yumjunstar/trocr-small-printedkorean-deleteunusedchar')
+            self.trocr_tokenizer = AutoTokenizer.from_pretrained('yumjunstar/trocr-small-printedkorean-deleteunusedchar')
             
         else: # user-defined model
             with open(os.path.join(self.user_network_directory, recog_network+ '.yaml'), encoding='utf8') as file:
@@ -413,7 +413,7 @@ class Reader(object):
                 # 준우 Edit   
                 result0 = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                               ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
-                              workers, self.device, self.trocr_model, self.trocr_processor, self.trocr_tokenizer)
+                              workers, self.device, self.trocr_model, self.trocr_processor, self.trocr_tokenizer, img_bundle)
                 result += result0
             for bbox in free_list:
                 h_list = []
@@ -422,7 +422,7 @@ class Reader(object):
                 # 준우 Edit   
                 result0 = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                               ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
-                              workers, self.device, self.trocr_model, self.trocr_processor, self.trocr_tokenizer)
+                              workers, self.device, self.trocr_model, self.trocr_processor, self.trocr_tokenizer, img_bundle)
                 result += result0
         # default mode will try to process multiple boxes at the same time
         else:
@@ -434,7 +434,7 @@ class Reader(object):
             # 준우 Edit   
             result = get_text(self.character, imgH, int(max_width), self.recognizer, self.converter, image_list,\
                           ignore_char, decoder, beamWidth, batch_size, contrast_ths, adjust_contrast, filter_ths,\
-                          workers, self.device, self.trocr_model, self.trocr_processor, self.trocr_tokenizer)
+                          workers, self.device, self.trocr_model, self.trocr_processor, self.trocr_tokenizer, img_bundle)
 
             if rotation_info and (horizontal_list+free_list):
                 # Reshape result to be a list of lists, each row being for 

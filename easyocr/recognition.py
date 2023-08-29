@@ -189,7 +189,7 @@ def get_recognizer(recog_network, network_params, character,\
 def get_text(character, imgH, imgW, recognizer, converter, image_list,\
              ignore_char = '',decoder = 'greedy', beamWidth =5, batch_size=1, contrast_ths=0.1,\
              adjust_contrast=0.5, filter_ths = 0.003, workers = 1, device = 'cpu', trocr_model = None, trocr_processor = None, trocr_tokenizer = None
-             ):
+             , img_bundle = None):
 
     coord = [item[0] for item in image_list]
     img_list = [item[1] for item in image_list]
@@ -242,14 +242,12 @@ def get_text(character, imgH, imgW, recognizer, converter, image_list,\
         # result1 이 2차원 배열 (box, (pred[0], pred[1]))
         device = torch.device(device)
         trocr_model.to(device)
-        start = time.time()
+        #start = time.time()
         texts = trocr_images2text(trocr_model = trocr_model, trocr_processor = trocr_processor, trocr_tokenizer=trocr_tokenizer,images = img_list, device = device)
         #print ('trocr time consume', time.time() - start)
         start = time.time()
         for cod, lbl, img in zip (coord, texts, img_list):
             background_color, text_color = get_text_and_background_color(img)
-            #background_color = 0xFFFFFF
-            #text_color = 0x000000
             result.append((cod, lbl, 0.9, background_color, text_color))
         #print ('output create consume', time.time()- start)
         return result
@@ -271,11 +269,46 @@ def get_text_and_background_color(img):
     grey_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     _, binary = cv2.threshold(grey_img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     #배경과 텍스트 부분의 평균 색상 계산
+
     text_mean = list(map(int, cv2.mean(img, mask=binary)))
     background_mean = list(map(int, cv2.mean(img, mask=cv2.bitwise_not(binary))))
+    text_mean = bgr2rgb_list(text_mean)
+    background_mean = bgr2rgb_list(background_mean)
+    #text_mean = bgr2rgb_hex(text_mean)
+    #background_mean = bgr2rgb_hex(background_mean)
+    #print (text_mean, background_mean)
+
     
-    text_mean[3] = 255
-    background_mean[3] = 127
+    # text_mean[3] = 255
+    # background_mean[3] = 127
     
     #print (text_mean, background_mean)
     return background_mean, text_mean
+def bgr2rgb_list(bgr):
+    if len (bgr) == 3:
+        blue = bgr[0]
+        green = bgr[1]
+        red = bgr[2]
+        return [red, green, blue]
+    elif (len(bgr) == 4):
+        blue = bgr[0]
+        green = bgr[1]
+        red = bgr[2]
+        alpha = bgr[3]
+        return [red, green, blue, alpha]
+def bgr2rgb_hex(bgr):
+    if len (bgr) == 3:
+        blue = bgr[0]
+        green = bgr[1]
+        red = bgr[2]
+        rgb_hex = red << 2 + green << 1 + blue
+        print (rgb_hex)
+        return rgb_hex
+    elif (len(bgr) == 4):
+        blue = bgr[0]
+        green = bgr[1]
+        red = bgr[2]
+        alpha = bgr[3]
+        rgba_hex = red << 3 + green << 2 + blue << 1 + alpha
+        print (rgba_hex)
+        return rgba_hex
