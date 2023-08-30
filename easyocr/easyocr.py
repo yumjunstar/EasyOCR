@@ -203,8 +203,8 @@ class Reader(object):
             self.trocr = True
             self.character = 'korean'
             self.trocr_processor = TrOCRProcessor.from_pretrained('microsoft/trocr-base-printed')
-            self.trocr_model = VisionEncoderDecoderModel.from_pretrained('yumjunstar/trocr-small-printedkorean-deleteunusedchar')
-            self.trocr_tokenizer = AutoTokenizer.from_pretrained('yumjunstar/trocr-small-printedkorean-deleteunusedchar')
+            self.trocr_model = VisionEncoderDecoderModel.from_pretrained('yumjunstar/trocr-small-printedkorean-deleteunusedchar_noise')
+            self.trocr_tokenizer = AutoTokenizer.from_pretrained('yumjunstar/trocr-small-printedkorean-deleteunusedchar_noise')
             
         else: # user-defined model
             with open(os.path.join(self.user_network_directory, recog_network+ '.yaml'), encoding='utf8') as file:
