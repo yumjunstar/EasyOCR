@@ -267,22 +267,14 @@ def trocr_images2text(trocr_model, trocr_processor, trocr_tokenizer, images = No
     return generated_text
 def get_text_and_background_color(img):
     grey_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    _, binary = cv2.threshold(grey_img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    binary = cv2.adaptiveThreshold(grey_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                               cv2.THRESH_BINARY_INV, 11, 2)
     #배경과 텍스트 부분의 평균 색상 계산
 
     text_mean = list(map(int, cv2.mean(img, mask=binary)))
     background_mean = list(map(int, cv2.mean(img, mask=cv2.bitwise_not(binary))))
     text_mean = bgr2rgb_list(text_mean)
     background_mean = bgr2rgb_list(background_mean)
-    #text_mean = bgr2rgb_hex(text_mean)
-    #background_mean = bgr2rgb_hex(background_mean)
-    #print (text_mean, background_mean)
-
-    
-    # text_mean[3] = 255
-    # background_mean[3] = 127
-    
-    #print (text_mean, background_mean)
     return background_mean, text_mean
 def bgr2rgb_list(bgr):
     if len (bgr) == 3:
